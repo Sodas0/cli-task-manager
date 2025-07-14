@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "cargo run -p cli-tasks",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}/target/debug/cli-tasks",
+            "env": {
+                "RUST_BACKTRACE": "short",
+                "RUSTC_TOOLCHAIN": "/home/soham/.rustup/toolchains/stable-x86_64-unknown-linux-gnu"
+            },
+            "args": ["Yippee", "01"],
+            "sourceMap": {},
+            "sourceLanguages": [
+                "rust"
+            ]
+        }
+    ]
+}
