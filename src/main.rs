@@ -1,5 +1,5 @@
 // use crate::task::Task;
-use crate::cli::parse_args;
+use crate::cli::{parse_args, command_add};
 
 mod task;
 mod cli;
@@ -10,6 +10,9 @@ fn main(){
     // let id:u16 = 0;
     //let task1 = Task{name:name, id:id};
     
-    parse_args();
+    let parsed_args: Vec<String> = parse_args();
+    command_add(parsed_args).unwrap(); // unwrap more elegantly 
+    
 
 }
+
