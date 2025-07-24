@@ -2,7 +2,9 @@
 
 use std::path::Path;
 use std::fs::File;
+use std::fs::OpenOptions;
 
+use std::io::{Seek, SeekFrom};
 use std::io::prelude::*;
 
 use std::env;
@@ -10,15 +12,75 @@ use crate::{cli::env::ArgsOs, task::{Task}};
 use std::ffi::OsString;
 
 
+/// HELPER FNS
+
 // Converts OsString type to String
 fn osstring_to_string(osstr:OsString) -> String {
     osstr.to_string_lossy().into_owned()
 }
 
+/// save_task_to_json: writes a serialized task to the JSON file, making sure to format the file properly. 
+/// 
+/// Args: 
+///     task_serialized(String): String object of task that has been already turned into a JSON snippet, ready to be inserted
+///     file(File): the opened File object (the JSON file) that is being written to.
+/// 
+/// Returns: 
+///     N/A
+/// 
+pub fn save_task_to_json(task_serialized: String, mut file: File) {
+    // seek to the end minus one to check for closing bracket
+    file.seek(SeekFrom::End(-1)).expect("Seek failed.");
+
+    let mut last_byte = [0u8; 1];
+    file.read_exact(&mut last_byte).expect("Failed to read last byte.");
+
+    // chop off the closing `]`
+    file.set_len(file.metadata().unwrap().len() - 1).expect("Failed to truncate.");
+
+    if last_byte[0] != b'[' && last_byte[0] != b'\n' {
+        file.write_all(b",\n").expect("Failed to write comma.");
+    }
+
+    file.write_all(task_serialized.as_bytes()).expect("Failed to write task.");
+    file.write_all(b"\n]").expect("Failed to close JSON array.");
+}
 
 
-/// parse_args()
+/// create_json: creates a JSON file with name provided by fname.
+/// 
+/// Args: 
+///     fname(&str): name of file to be created in root of project.
+///     
+/// 
+/// Returns: 
+///     File object that is opened, with read and append permissions.
+/// 
+pub fn create_json(fname: &str) -> File {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .append(true)
+        .create(true)
+        .open(fname)
+        .expect("Failed to create/open database file.");
+
+    // write opening array bracket if newly created
+    let metadata = file.metadata().expect("Failed to get file metadata.");
+    if metadata.len() == 0 {
+        file.write_all(b"[\n").expect("Failed to write opening bracket.");
+    }
+
+    file
+}
+
+
+/// END HELPER FNS
+
+
+/// parse_args: When called, analyzes the command line arguments provided at runtime and returns a list of parsed arguments,
+///                 ignoring the first one.
 /// #  Args: 
+///     N/A
 /// 
 /// # Returns: Vector of Strings where each element corresponds to a provided command line argument.
 /// 
@@ -68,8 +130,7 @@ pub fn parse_args() -> Vec<String> {
 
 
 
-/// command_add():
-///     Creates a new task and stores it in the local JSON database.
+/// command_add: Creates a new task and stores it in the local JSON database.
 ///        
 /// 
 /// # Args: 
@@ -78,15 +139,26 @@ pub fn parse_args() -> Vec<String> {
 /// 
 /// # Returns: Result<(), String>
 /// 
-/// 
+/// TODO: append to JSON instead of overwriting.
 pub fn command_add(parsed_args: Vec<String>) -> Result<(), String>{
     let mut success: bool = false;
-    let fname = "database.json";
-    // need to check if task name exists already - panic if it does
-    //      in the future, maybe work on recover
-    
+    let fname: &'static str = "database.json";
+    let json_file: File;    
+
+    // create if task name exists already. otherwise, just open.
+    // potential refactor , maybe just get rid of create_json() and put logic here.
+
+    if !Path::new(fname).exists() {
+        json_file = create_json(fname);
+    } else {
+        json_file = OpenOptions::new()
+            .read(true)
+            .append(true)
+            .open(fname).unwrap();
+    }
+
     let task_name: String = parsed_args[1].clone();
-    let task_id: u16 = 0; // use random ID later.
+    let task_id: u16 = 0; // TODO: use random ID later.
     let task_is_done: bool = false;
 
     // create a task instance with the specified name
@@ -97,12 +169,11 @@ pub fn command_add(parsed_args: Vec<String>) -> Result<(), String>{
     };
 
     let json = serde_json::to_string(&task).unwrap();
-    save_task_to_json(json, fname);
+    save_task_to_json(json, json_file);
+    
+    success = true;
 
-    // if fname exists in dir, sucess = true
-    if Path::new(fname).exists() {
-        success = true;
-    }
+    
 
     if success{
         Ok(())
@@ -112,13 +183,9 @@ pub fn command_add(parsed_args: Vec<String>) -> Result<(), String>{
 }
 
 
-pub fn save_task_to_json(task_serialized:String, fname: &str){
-  
-    // need checks here to see if task already exists. 
-    let mut file = File::create(fname).expect("something went wrong buddy");
-    file.write_all(task_serialized.as_bytes()).expect("couldnt create file");
 
-}
+
+
 
 
 
