@@ -5,8 +5,10 @@ use std::fs::File;
 use std::env;
 use crate::{task::{Task}};
 use crate::{cli::env::ArgsOs};
+use std::io::BufReader;
+use serde_json::Value;
 
-use crate::storage::{osstring_to_string, save_task_to_json, create_json};
+use crate::storage::{osstring_to_string, save_task_to_json};
 
 
 
@@ -87,7 +89,7 @@ pub fn command_add(parsed_args: Vec<String>, json_file: File){
     };
 
     let json = serde_json::to_string(&task).unwrap();
-    save_task_to_json(json, json_file);
+    save_task_to_json(json, json_file).unwrap();
     
 
 }
@@ -101,8 +103,19 @@ pub fn command_add(parsed_args: Vec<String>, json_file: File){
 /// # Returns: Result<(), String>
 /// 
 /// TODO: Implement first. Make it print more neatly later.
-pub fn command_view() -> Result<(), String>{
+pub fn command_view(json_file: File) -> Result<(), String>{
     
+    let reader = BufReader::new(json_file);
+
+    let data: Value = serde_json::from_reader(reader).expect("Failed to parse JSON");
+
+    if let Value::Array(items) = data {
+        for (i, item) in items.iter().enumerate() {
+            println!("Task {}: {}", i, item);
+        }
+    } else {
+        println!("JSON is not an array");
+    }
     
     Ok(())
 }
