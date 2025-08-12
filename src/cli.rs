@@ -121,6 +121,41 @@ pub fn command_view(json_file: File) -> Result<(), String>{
 }
 
 
+/// command_done: marks a task as completed by setting its is_done field to true
+///        
+/// # Args: 
+///     parsed_args (Vec<String>): list where each element is a parsed argument. Will always contain 2 elements for done functionality.
+///     file_path (&str): path to the JSON file storing task information.
+/// 
+/// # Returns: Result<(), String>
+/// 
+pub fn command_done(parsed_args: Vec<String>, file_path: &str) -> Result<(), String> {
+    let task_name: String = parsed_args[1].clone();
+    
+    // Read all tasks from the JSON file
+    let mut tasks = crate::storage::read_tasks_from_json(file_path)?;
+    
+    // Find the task by name and mark it as done
+    let mut task_found = false;
+    for task in &mut tasks {
+        if task.name == task_name {
+            task.is_done = true;
+            task_found = true;
+            break;
+        }
+    }
+    
+    if !task_found {
+        return Err(format!("Task '{}' not found", task_name));
+    }
+    
+    // Write the updated tasks back to the file
+    crate::storage::write_tasks_to_json(tasks, file_path)?;
+    
+    println!("Task '{}' marked as completed!", task_name);
+    Ok(())
+}
+
 
 // #[cfg(test)]
 // mod test{

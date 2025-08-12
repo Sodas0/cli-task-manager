@@ -1,10 +1,13 @@
 
-use std::io::{Seek, SeekFrom, Result};
+use std::io::{Seek, SeekFrom, Result as IoResult};
 use std::io::prelude::*;
 use std::ffi::OsString;
 
 use std::fs::File;
 use std::fs::OpenOptions;
+use crate::task::Task;
+use serde_json;
+
 // HELPER FNS
 
 // Converts OsString type to String
@@ -21,7 +24,7 @@ pub fn osstring_to_string(osstr:OsString) -> String {
 /// Returns: 
 ///     N/A
 /// 
-pub fn save_task_to_json(task_serialized: String, mut file: File) -> Result<()>{
+pub fn save_task_to_json(task_serialized: String, mut file: File) -> IoResult<()>{
     // seek to the end minus one to check for closing bracket
     file.seek(SeekFrom::End(-1)).expect("Seek failed.");
 
@@ -68,5 +71,51 @@ pub fn create_json(fname: &str) -> File {
     file
 }
 
+/// read_tasks_from_json: reads and deserializes all tasks from the JSON file
+/// 
+/// Args: 
+///     file_path(&str): path to the JSON file
+/// 
+/// Returns: 
+///     Result<Vec<Task>, String> - Vector of tasks or error message
+/// 
+pub fn read_tasks_from_json(file_path: &str) -> std::result::Result<Vec<Task>, String> {
+    let file = File::open(file_path)
+        .map_err(|e| format!("Failed to open file: {}", e))?;
+    
+    let reader = std::io::BufReader::new(file);
+    
+    // Try to deserialize as array of tasks
+    match serde_json::from_reader::<_, Vec<Task>>(reader) {
+        Ok(tasks) => Ok(tasks),
+        Err(e) => {
+            // If it's an empty file or malformed, return empty vector
+            if e.is_eof() || e.is_data() {
+                Ok(Vec::new())
+            } else {
+                Err(format!("Failed to parse JSON: {}", e))
+            }
+        }
+    }
+}
+
+/// write_tasks_to_json: writes a vector of tasks to the JSON file, overwriting existing content
+/// 
+/// Args: 
+///     tasks(Vec<Task>): vector of tasks to write
+///     file_path(&str): path to the JSON file
+/// 
+/// Returns: 
+///     Result<(), String> - success or error message
+/// 
+pub fn write_tasks_to_json(tasks: Vec<Task>, file_path: &str) -> std::result::Result<(), String> {
+    let json_string = serde_json::to_string_pretty(&tasks)
+        .map_err(|e| format!("Failed to serialize tasks: {}", e))?;
+    
+    std::fs::write(file_path, json_string)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+    
+    Ok(())
+}
 
 // END HELPER FNS
