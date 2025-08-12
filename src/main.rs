@@ -3,7 +3,7 @@ mod cli;
 mod storage;
 
 
-use crate::cli::{parse_args, command_add, command_view, command_done};
+use crate::cli::{parse_args, command_add, command_view, command_done, command_remove};
 use crate::storage::{create_json};
 
 use std::fs::File;
@@ -52,6 +52,15 @@ fn main(){
                 eprintln!("Usage: -done <task_name>");
             } else {
                 if let Err(e) = command_done(parsed_args, fpath) {
+                    eprintln!("Error: {}", e);
+                }
+            }
+        }
+        "-remove" => {
+            if parsed_args.len() < 2 {
+                eprintln!("Usage: -remove <task_name>");
+            } else {
+                if let Err(e) = command_remove(parsed_args, fpath) {
                     eprintln!("Error: {}", e);
                 }
             }
