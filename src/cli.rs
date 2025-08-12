@@ -156,11 +156,38 @@ pub fn command_done(parsed_args: Vec<String>, file_path: &str) -> Result<(), Str
     Ok(())
 }
 
+/// command_remove: removes a task from the JSON file by name
+///        
+/// # Args: 
+///     parsed_args (Vec<String>): list where each element is a parsed argument. Will always contain 2 elements for remove functionality.
+///     file_path (&str): path to the JSON file storing task information.
+/// 
+/// # Returns: Result<(), String>
+/// 
+pub fn command_remove(parsed_args: Vec<String>, file_path: &str) -> Result<(), String> {
+    let task_name: String = parsed_args[1].clone();
+    
+    // Read all tasks from the JSON file
+    let mut tasks = crate::storage::read_tasks_from_json(file_path)?;
+    
+    // Find and remove the task by name
+    let initial_length = tasks.len();
+    tasks.retain(|task| task.name != task_name);
+    
+    if tasks.len() == initial_length {
+        return Err(format!("Task '{}' not found", task_name));
+    }
+    
+    // Write the updated tasks back to the file
+    crate::storage::write_tasks_to_json(tasks, file_path)?;
+    
+    println!("Task '{}' removed successfully!", task_name);
+    Ok(())
+}
 
 // #[cfg(test)]
 // mod test{
 //     use super::*;
-
 //     #[test]
 //     fn normal_command(){
 //         // TODO: write tests with OsString types to simulate real cmds
